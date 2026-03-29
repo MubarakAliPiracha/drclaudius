@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
 import LandingPage from './LandingPage'
 import PatientPage from './PatientPage'
 import DoctorPage from './DoctorPage'
+import { PatientProvider } from './context/PatientContext'
 
 function LandingWrapper() {
   const navigate = useNavigate()
@@ -16,12 +17,14 @@ function LandingWrapper() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingWrapper />} />
-        <Route path="/patient" element={<PatientPage />} />
-        <Route path="/doctor" element={<DoctorPage />} />
-      </Routes>
-    </BrowserRouter>
+    <PatientProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<LandingWrapper />} />
+          <Route path="/patient" element={<PatientPage />} />
+          <Route path="/doctor" element={<DoctorPage />} />
+        </Routes>
+      </BrowserRouter>
+    </PatientProvider>
   )
 }

@@ -555,12 +555,23 @@ function MeetSection() {
       desc: 'Patients chat with AI in the waiting room — no clipboard, no forms.',
     },
     {
-      icon: <span className="text-3xl">📋</span>,
+      icon: (
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M15 2H9a1 1 0 0 0-1 1v2h8V3a1 1 0 0 0-1-1Z" />
+          <path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2" />
+          <path d="M12 11h4M12 16h4M8 11h.01M8 16h.01" />
+        </svg>
+      ),
       title: 'Instant Summary',
       desc: 'Structured reports ready before the doctor walks in.',
     },
     {
-      icon: <span className="text-3xl">🛡️</span>,
+      icon: (
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      ),
       title: 'Doctor Decides',
       desc: 'AI prepares. Humans diagnose. Always.',
     },
@@ -654,10 +665,47 @@ function HowItWorksSection() {
   const isInView = useInView(ref, { once: true, amount: 0.2 })
 
   const steps = [
-    { icon: '📱', title: 'Scan QR', desc: 'Patient scans a code in the waiting room' },
-    { icon: '💬', title: 'Chat with AI', desc: 'Warm, structured conversation gathers history' },
-    { icon: '📄', title: 'Summary generated', desc: 'Complaint, history, severity, red flags — all structured' },
-    { icon: '✅', title: 'Doctor walks in informed', desc: 'No more starting from scratch' },
+    {
+      icon: (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="5" y="2" width="14" height="20" rx="2" />
+          <path d="M12 18h.01" />
+        </svg>
+      ),
+      title: 'Scan QR',
+      desc: 'Patient scans a code in the waiting room',
+    },
+    {
+      icon: (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          <path d="M8 10h8M8 14h4" />
+        </svg>
+      ),
+      title: 'Chat with AI',
+      desc: 'Warm, structured conversation gathers history',
+    },
+    {
+      icon: (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <path d="M14 2v6h6" />
+          <path d="M16 13H8M16 17H8M10 9H8" />
+        </svg>
+      ),
+      title: 'Summary generated',
+      desc: 'Complaint, history, severity, red flags — all structured',
+    },
+    {
+      icon: (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      ),
+      title: 'Doctor walks in informed',
+      desc: 'No more starting from scratch',
+    },
   ]
 
   return (
@@ -699,7 +747,7 @@ function HowItWorksSection() {
               >
                 {/* Step circle */}
                 <div
-                  className="w-12 h-12 md:w-20 md:h-20 rounded-2xl flex items-center justify-center text-2xl md:text-4xl shrink-0 relative z-10"
+                  className="w-12 h-12 md:w-20 md:h-20 rounded-2xl flex items-center justify-center shrink-0 relative z-10"
                   style={{
                     background: '#FFFCF7',
                     border: '2px solid #E8E0D4',
