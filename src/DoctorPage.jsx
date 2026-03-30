@@ -56,6 +56,28 @@ function UserIcon() {
   )
 }
 
+function ClockIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" />
+    </svg>
+  )
+}
+
+// Time ago helper
+function timeAgo(timestamp) {
+  if (!timestamp) return ''
+  const diff = Date.now() - timestamp
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  return `${days}d ago`
+}
+
 // Severity badge
 function SeverityBadge({ severity }) {
   const num = parseInt(severity)
@@ -85,14 +107,23 @@ function SeverityBadge({ severity }) {
 // PATIENT CARD
 // ============================================================
 function PatientCard({ patient, isExpanded, onToggle }) {
+  const isNew = !patient._mock
+  const isRecent = patient._timestamp && (Date.now() - patient._timestamp) < 3600000 // < 1 hour
+
   return (
     <motion.div
       layout
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
       className="rounded-2xl overflow-hidden transition-shadow duration-200"
       style={{
         background: '#FFFCF7',
-        border: '1px solid #E8E0D4',
-        boxShadow: isExpanded ? '0 4px 20px rgba(0,0,0,0.06)' : '0 2px 12px rgba(0,0,0,0.04)',
+        border: isNew ? '1px solid #D97706' : '1px solid #E8E0D4',
+        boxShadow: isExpanded
+          ? '0 4px 20px rgba(0,0,0,0.06)'
+          : isNew
+            ? '0 2px 12px rgba(217,119,6,0.08)'
+            : '0 2px 12px rgba(0,0,0,0.04)',
       }}
     >
       {/* Card header */}
@@ -102,7 +133,7 @@ function PatientCard({ patient, isExpanded, onToggle }) {
       >
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: patient._mock ? '#F5F0E8' : '#FEF3C7', color: '#2D2D3A' }}
+          style={{ background: isNew ? '#FEF3C7' : '#F5F0E8', color: '#2D2D3A' }}
         >
           <UserIcon />
         </div>
@@ -111,7 +142,7 @@ function PatientCard({ patient, isExpanded, onToggle }) {
             <p style={{ fontFamily: '"Newsreader", serif', color: '#2D2D3A' }} className="text-base font-medium truncate">
               {patient.patient_name}
             </p>
-            {!patient._mock && (
+            {isNew && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
                 style={{ background: '#FEF3C7', color: '#D97706', fontFamily: '"Inter", sans-serif' }}
@@ -119,10 +150,27 @@ function PatientCard({ patient, isExpanded, onToggle }) {
                 NEW
               </span>
             )}
+            {isRecent && isNew && (
+              <span
+                className="w-2 h-2 rounded-full shrink-0 animate-pulse"
+                style={{ background: '#4ADE80' }}
+              />
+            )}
           </div>
-          <p style={{ fontFamily: '"Inter", sans-serif', color: '#8B8B9E' }} className="text-xs truncate">
-            {patient.chief_complaint}
-          </p>
+          <div className="flex items-center gap-2">
+            <p style={{ fontFamily: '"Inter", sans-serif', color: '#8B8B9E' }} className="text-xs truncate">
+              {patient.chief_complaint}
+            </p>
+            {patient._timestamp && (
+              <span
+                className="flex items-center gap-1 shrink-0 text-[11px]"
+                style={{ fontFamily: '"Inter", sans-serif', color: '#8B8B9E' }}
+              >
+                <ClockIcon />
+                {timeAgo(patient._timestamp)}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <SeverityBadge severity={patient.severity} />
@@ -237,8 +285,16 @@ export default function DoctorPage() {
   const navigate = useNavigate()
   const { summaries } = usePatients()
   const [expandedIdx, setExpandedIdx] = useState(null)
+  const [filter, setFilter] = useState('all') // 'all' | 'active'
 
   const realCount = summaries.filter((s) => !s._mock).length
+
+  // Active = submitted within the last 24 hours (real patients only)
+  const activeSummaries = summaries.filter(
+    (s) => !s._mock && s._timestamp && (Date.now() - s._timestamp) < 86400000
+  )
+
+  const displayed = filter === 'active' ? activeSummaries : summaries
 
   return (
     <div className="min-h-screen" style={{ background: '#F5F0E8' }}>
@@ -266,7 +322,7 @@ export default function DoctorPage() {
               Doctor Dashboard
             </p>
             <p style={{ fontFamily: '"Inter", sans-serif', color: '#8B8B9E' }} className="text-xs">
-              {summaries.length} patient{summaries.length !== 1 ? 's' : ''} ready for review
+              {summaries.length} patient{summaries.length !== 1 ? 's' : ''} total
             </p>
           </div>
         </div>
@@ -280,24 +336,67 @@ export default function DoctorPage() {
         )}
       </div>
 
-      {/* Patient list */}
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-3">
-        {summaries.length === 0 ? (
-          <div className="text-center py-20">
-            <p style={{ fontFamily: '"Inter", sans-serif', color: '#8B8B9E' }} className="text-sm">
-              No patients have completed intake yet.
-            </p>
-          </div>
-        ) : (
-          summaries.map((patient, i) => (
-            <PatientCard
-              key={`${patient.patient_name}-${i}`}
-              patient={patient}
-              isExpanded={expandedIdx === i}
-              onToggle={() => setExpandedIdx(expandedIdx === i ? null : i)}
-            />
-          ))
-        )}
+      <div className="max-w-2xl mx-auto px-4 py-6">
+        {/* Filter tabs */}
+        <div className="flex gap-2 mb-5">
+          <button
+            onClick={() => { setFilter('active'); setExpandedIdx(null) }}
+            className="px-4 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all"
+            style={{
+              fontFamily: '"Inter", sans-serif',
+              background: filter === 'active' ? '#D97706' : 'transparent',
+              color: filter === 'active' ? '#fff' : '#8B8B9E',
+              border: filter === 'active' ? '1px solid #D97706' : '1px solid #E8E0D4',
+            }}
+          >
+            Active
+            {activeSummaries.length > 0 && (
+              <span
+                className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold"
+                style={{
+                  background: filter === 'active' ? 'rgba(255,255,255,0.25)' : '#FEF3C7',
+                  color: filter === 'active' ? '#fff' : '#D97706',
+                }}
+              >
+                {activeSummaries.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => { setFilter('all'); setExpandedIdx(null) }}
+            className="px-4 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all"
+            style={{
+              fontFamily: '"Inter", sans-serif',
+              background: filter === 'all' ? '#D97706' : 'transparent',
+              color: filter === 'all' ? '#fff' : '#8B8B9E',
+              border: filter === 'all' ? '1px solid #D97706' : '1px solid #E8E0D4',
+            }}
+          >
+            All Patients
+          </button>
+        </div>
+
+        {/* Patient list */}
+        <div className="space-y-3">
+          {displayed.length === 0 ? (
+            <div className="text-center py-20">
+              <p style={{ fontFamily: '"Inter", sans-serif', color: '#8B8B9E' }} className="text-sm">
+                {filter === 'active'
+                  ? 'No active patients in the last 24 hours.'
+                  : 'No patients have completed intake yet.'}
+              </p>
+            </div>
+          ) : (
+            displayed.map((patient, i) => (
+              <PatientCard
+                key={`${patient.patient_name}-${patient._timestamp}-${i}`}
+                patient={patient}
+                isExpanded={expandedIdx === i}
+                onToggle={() => setExpandedIdx(expandedIdx === i ? null : i)}
+              />
+            ))
+          )}
+        </div>
       </div>
     </div>
   )

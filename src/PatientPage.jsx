@@ -5,7 +5,7 @@ import { usePatients } from './context/PatientContext'
 
 const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY
 
-const SYSTEM_PROMPT = `You are Dr. Claudeis, a friendly AI intake assistant at a Canadian healthcare clinic. You gather patient info BEFORE the doctor sees them. RULES: Never diagnose. Never suggest conditions. If asked "what do I have?" say "Your doctor will assess that." If emergency symptoms (chest pain, breathing difficulty, stroke signs), say "Please alert staff or call 911 immediately." Ask ONE question at a time. Be warm. Keep to 5-8 exchanges. FLOW: 1) Greet by name, confirm reason. 2) Ask to describe concern. 3) Ask when it started, getting better/worse/same. 4) Severity 1-10. 5) Tried anything? 6) Medical history/medications? 7) Anything else for doctor? 8) Thank them. After final exchange, output ONLY a raw JSON object (no markdown fences): {"patient_name":"...","chief_complaint":"...","symptom_description":"...","onset":"...","progression":"...","severity":"X/10","self_treatment":"...","medical_history":"...","medications":"...","additional_notes":"...","suggested_doctor_questions":["...","...","..."],"flags":["..."]}`
+const SYSTEM_PROMPT = `You are Dr. Claudeis, a friendly AI intake assistant at a Canadian healthcare clinic. You gather patient info BEFORE the doctor sees them. RULES: Never diagnose. Never suggest conditions. If asked "what do I have?" say "Your doctor will assess that." If emergency symptoms (chest pain, breathing difficulty, stroke signs), say "Please alert staff or call 911 immediately." Ask ONE question at a time. Be warm. Keep to 5-8 exchanges. FLOW: 1) Greet by name, confirm reason. 2) Ask to describe concern. 3) Ask when it started, getting better/worse/same. 4) Severity 1-10. 5) Tried anything? 6) Medical history/medications? 7) Anything else for doctor? 8) Thank them and let them know the doctor will review their information shortly. After thanking the patient in your final message, include the structured summary as a JSON object on its own line at the very end. Output ONLY raw JSON with no markdown fences, no backticks, no extra text after the opening brace: {"patient_name":"...","chief_complaint":"...","symptom_description":"...","onset":"...","progression":"...","severity":"X/10","self_treatment":"...","medical_history":"...","medications":"...","additional_notes":"...","suggested_doctor_questions":["...","...","..."],"flags":["..."]}`
 
 const REASONS = [
   'General checkup',
@@ -261,15 +261,26 @@ function ChatInterface({ patientInfo, onComplete, onBack }) {
       const data = await response.json()
       const aiText = data.content?.[0]?.text || ''
 
-      // Check if the response is the final JSON summary
-      const trimmed = aiText.trim()
-      if (trimmed.startsWith('{') && trimmed.includes('"patient_name"')) {
+      // Try to extract a JSON summary from anywhere in the response.
+      // The AI may wrap it in text like "Thank you! ..." followed by JSON,
+      // or put it in markdown fences, etc.
+      const jsonMatch = aiText.match(/\{[\s\S]*"patient_name"[\s\S]*\}/)
+      if (jsonMatch) {
         try {
-          const summary = JSON.parse(trimmed)
+          const summary = JSON.parse(jsonMatch[0])
+          // Show the conversational part (before the JSON) as a final message
+          const preJson = aiText.slice(0, aiText.indexOf(jsonMatch[0])).trim()
+          // Strip markdown fences that might precede the JSON
+          const cleaned = preJson.replace(/```json?\s*$/i, '').trim()
+          if (cleaned) {
+            setMessages((prev) => [...prev, { role: 'assistant', content: cleaned }])
+          }
+          // Small delay so the user sees the thank-you message before transition
+          await new Promise((r) => setTimeout(r, cleaned ? 1200 : 0))
           onComplete(summary)
           return
         } catch {
-          // Not valid JSON, treat as normal message
+          // Couldn't parse — fall through to show as normal message
         }
       }
 

@@ -1,4 +1,6 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
+
+const STORAGE_KEY = 'drclaudius_summaries'
 
 const MOCK_PATIENTS = [
   {
@@ -43,10 +45,34 @@ const MOCK_PATIENTS = [
   },
 ]
 
+function loadSummaries() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      // Merge: stored real patients first, then mocks
+      return [...parsed, ...MOCK_PATIENTS]
+    }
+  } catch {
+    // corrupted storage, ignore
+  }
+  return MOCK_PATIENTS
+}
+
+function persistRealSummaries(summaries) {
+  const real = summaries.filter((s) => !s._mock)
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(real))
+}
+
 const PatientContext = createContext(null)
 
 export function PatientProvider({ children }) {
-  const [summaries, setSummaries] = useState(MOCK_PATIENTS)
+  const [summaries, setSummaries] = useState(loadSummaries)
+
+  // Persist real summaries whenever they change
+  useEffect(() => {
+    persistRealSummaries(summaries)
+  }, [summaries])
 
   const addSummary = (summary) => {
     setSummaries((prev) => [{ ...summary, _mock: false, _timestamp: Date.now() }, ...prev])
