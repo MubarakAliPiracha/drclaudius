@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 
 const STORAGE_KEY = 'drclaudius_summaries'
+const CHANNEL_NAME = 'drclaudius_sync'
 
 const MOCK_PATIENTS = [
   {
@@ -45,38 +46,71 @@ const MOCK_PATIENTS = [
   },
 ]
 
-function loadSummaries() {
+function loadRealSummaries() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      // Merge: stored real patients first, then mocks
-      return [...parsed, ...MOCK_PATIENTS]
-    }
+    if (stored) return JSON.parse(stored)
   } catch {
-    // corrupted storage, ignore
+    // corrupted storage
   }
-  return MOCK_PATIENTS
+  return []
 }
 
-function persistRealSummaries(summaries) {
-  const real = summaries.filter((s) => !s._mock)
+function buildFullList(realSummaries) {
+  return [...realSummaries, ...MOCK_PATIENTS]
+}
+
+function persistRealSummaries(real) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(real))
 }
 
 const PatientContext = createContext(null)
 
 export function PatientProvider({ children }) {
-  const [summaries, setSummaries] = useState(loadSummaries)
+  const [summaries, setSummaries] = useState(() => buildFullList(loadRealSummaries()))
+  const channelRef = useRef(null)
 
-  // Persist real summaries whenever they change
+  // Set up BroadcastChannel for instant cross-tab sync
   useEffect(() => {
-    persistRealSummaries(summaries)
-  }, [summaries])
+    const channel = new BroadcastChannel(CHANNEL_NAME)
+    channelRef.current = channel
 
-  const addSummary = (summary) => {
-    setSummaries((prev) => [{ ...summary, _mock: false, _timestamp: Date.now() }, ...prev])
-  }
+    channel.onmessage = (event) => {
+      if (event.data?.type === 'sync') {
+        // Another tab added a patient — reload from localStorage
+        setSummaries(buildFullList(loadRealSummaries()))
+      }
+    }
+
+    // Also listen for the storage event (fires when *another* tab writes to localStorage)
+    const onStorage = (e) => {
+      if (e.key === STORAGE_KEY) {
+        setSummaries(buildFullList(loadRealSummaries()))
+      }
+    }
+    window.addEventListener('storage', onStorage)
+
+    return () => {
+      channel.close()
+      window.removeEventListener('storage', onStorage)
+    }
+  }, [])
+
+  const addSummary = useCallback((summary) => {
+    const entry = { ...summary, _mock: false, _timestamp: Date.now() }
+    setSummaries((prev) => {
+      const updated = [entry, ...prev]
+      const real = updated.filter((s) => !s._mock)
+      persistRealSummaries(real)
+      return updated
+    })
+    // Notify other tabs instantly
+    try {
+      channelRef.current?.postMessage({ type: 'sync' })
+    } catch {
+      // channel closed, ignore
+    }
+  }, [])
 
   return (
     <PatientContext.Provider value={{ summaries, addSummary }}>

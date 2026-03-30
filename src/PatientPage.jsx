@@ -36,9 +36,24 @@ function SendIcon() {
 
 function SparkleIcon({ size = 20 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M12 2L14 9L12 16L10 9Z" fill="#D97706" />
-      <path d="M5 9L10 7.5L19 9L14 10.5Z" fill="#D97706" />
+    <svg width={size} height={size} viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g fill="#D97706">
+        <rect x="3" y="0" width="6" height="1" />
+        <rect x="2" y="1" width="8" height="2" />
+        <rect x="0" y="3" width="12" height="2" />
+        <rect x="2" y="5" width="8" height="2" />
+        <rect x="2" y="7" width="2" height="3" />
+        <rect x="5" y="7" width="2" height="3" />
+        <rect x="8" y="7" width="2" height="3" />
+      </g>
+      <rect x="3" y="2" width="1.5" height="1.5" fill="#1A1A2E" />
+      <rect x="7.5" y="2" width="1.5" height="1.5" fill="#1A1A2E" />
+      <path d="M 1.5 1.5 Q 6 -0.5 10.5 1.5" stroke="#2D2D3A" strokeWidth="0.6" fill="none" />
+      <circle cx="6" cy="1" r="1.4" fill="#F5F0E8" stroke="#2D2D3A" strokeWidth="0.3" />
+      <circle cx="6" cy="1" r="0.5" fill="#1A1A2E" />
+      <path d="M 1.5 5.5 C 1.5 9 10.5 9 10.5 5.5" stroke="#2D2D3A" strokeWidth="0.8" fill="none" strokeLinecap="round" />
+      <path d="M 6 7.5 v 1.5" stroke="#2D2D3A" strokeWidth="0.8" />
+      <circle cx="6" cy="9" r="1" fill="#F5F0E8" stroke="#2D2D3A" strokeWidth="0.4" />
     </svg>
   )
 }
